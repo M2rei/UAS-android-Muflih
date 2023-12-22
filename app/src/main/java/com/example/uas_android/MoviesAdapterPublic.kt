@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.uas_android.database.Movies
 
+
 class MoviesAdapterPublic(val listmovie: List<Movies>) :
     RecyclerView.Adapter<MoviesAdapterPublic.ViewHolder>() {
 
@@ -60,7 +61,7 @@ class MoviesAdapterPublic(val listmovie: List<Movies>) :
     }
 
     private fun onClick(parent: ViewGroup, item: Movies) {
-        val intent = Intent(parent.context.applicationContext, DetailActivity::class.java)
+        val intent = Intent(parent.context.applicationContext, DetaillActivity::class.java)
         intent.putExtra("UPDATE_ID", item.id)
         intent.putExtra("TITLE", item.title)
         intent.putExtra("DESCRIPTION", item.description)

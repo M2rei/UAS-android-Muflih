@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.MutableLiveData
+import com.example.uas_android.database.Movies
 import com.example.uas_android.database.MoviesDao
 import com.example.uas_android.database.MoviesRoomDatabase
 import com.example.uas_android.databinding.ActivityAddMovieBinding
@@ -22,8 +23,8 @@ class Add_movie_Activity : AppCompatActivity() {
     private lateinit var binding: ActivityAddMovieBinding
     private val firestore = FirebaseFirestore.getInstance()
     private val movieCollection = firestore.collection("movie")
-    private val movieListLiveData: MutableLiveData<List<Movie>> by lazy {
-        MutableLiveData<List<Movie>>()
+    private val movieListLiveData: MutableLiveData<List<Movies>> by lazy {
+        MutableLiveData<List<Movies>>()
     }
     private lateinit var moviedb: MoviesRoomDatabase
     private lateinit var executorService: ExecutorService
@@ -59,7 +60,7 @@ class Add_movie_Activity : AppCompatActivity() {
                         if (task.isSuccessful) {
 
                             storageRef.child(name).downloadUrl.addOnSuccessListener { uri ->
-                                val newMovie = Movie(title = title, Description = description, image = uri.toString())
+                                val newMovie = Movies(title = title, description = description, image = uri.toString())
                                 addMovie(newMovie)
                             }
                         } else {
@@ -72,7 +73,7 @@ class Add_movie_Activity : AppCompatActivity() {
         }
 
     }
-        private fun addMovie(movie: Movie) {
+        private fun addMovie(movie: Movies) {
             movieCollection.add(movie)
                 .addOnSuccessListener { documentReference ->
                     val createdMovieId = documentReference.id

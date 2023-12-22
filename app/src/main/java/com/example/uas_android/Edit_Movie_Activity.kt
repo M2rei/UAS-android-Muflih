@@ -2,35 +2,47 @@ package com.example.uas_android
 
 import android.content.Intent
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.MutableLiveData
 import com.bumptech.glide.Glide
+import com.example.uas_android.database.Movies
+import com.example.uas_android.database.MoviesDao
+import com.example.uas_android.database.MoviesRoomDatabase
 import com.example.uas_android.databinding.ActivityEditMovieBinding
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class Edit_Movie_Activity : AppCompatActivity() {
     private lateinit var binding: ActivityEditMovieBinding
     private val firestore = FirebaseFirestore.getInstance()
     private var updateId = ""
     private val movieCollection = firestore.collection("movie")
-    private val movieListLiveData: MutableLiveData<List<Movie>> by lazy {
-        MutableLiveData<List<Movie>>()
+    private val movieListLiveData: MutableLiveData<List<Movies>> by lazy {
+        MutableLiveData<List<Movies>>()
     }
     private lateinit var storageRef: StorageReference
     private var imageURI: Uri? = null
     private var imageCurent: Uri? = null
+
+    private lateinit var mdao: MoviesDao
+    private lateinit var moviedb: MoviesRoomDatabase
+    private lateinit var executorService: ExecutorService
     override fun onCreate(savedInstanceState: Bundle?) {
         binding = ActivityEditMovieBinding.inflate(layoutInflater)
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
         storageRef = FirebaseStorage.getInstance().reference.child("images")
+        moviedb = MoviesRoomDatabase.getInstance(applicationContext)
+        executorService = Executors.newSingleThreadExecutor()
+        mdao = moviedb.moviesDao()
 
         val intentData = intent
         if (intentData != null) {
@@ -61,9 +73,9 @@ class Edit_Movie_Activity : AppCompatActivity() {
                     storageRef.child(name).putFile(imageURI!!).addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             storageRef.child(name).downloadUrl.addOnSuccessListener { uri ->
-                                val editedMovie = Movie(
+                                val editedMovie = Movies(
                                     title = title,
-                                    Description = description,
+                                    description = description,
                                     image = uri.toString()
                                 )
                                 editMovie(editedMovie)
@@ -75,9 +87,9 @@ class Edit_Movie_Activity : AppCompatActivity() {
                         }
                     }
                 }  else {
-                    val editedMovie = Movie(
+                    val editedMovie = Movies(
                         title = title,
-                        Description = description,
+                        description = description,
                         image = imageCurent.toString())
                     editMovie(editedMovie)
                     setEmptyField()
@@ -86,7 +98,7 @@ class Edit_Movie_Activity : AppCompatActivity() {
             btndelete.setOnClickListener {
                 val title = txteditTitle.text.toString()
                 val description = txteditDesc.text.toString()
-                val movieDelete = Movie(id = updateId, title = title, Description = description)
+                val movieDelete = Movies(id = updateId, title = title, description = description)
                 deleteMovie(movieDelete)
                 true
             }
@@ -97,31 +109,36 @@ class Edit_Movie_Activity : AppCompatActivity() {
         }
     }
 
-    private fun editMovie(movie: Movie) {
-        movie.id = updateId
-        movieCollection.document(updateId).set(movie)
-            .addOnFailureListener {
-                Log.d("MainActivity3", "Error updating budget: ", it)
+    private fun editMovie(movie: Movies) {
+        movieCollection.get().addOnSuccessListener { value ->
+            for(i in value) {
+                if(i.id == movie.id) {
+                    movieCollection.document(movie.id).set(movie)
+                    updateId
+                }
             }
+        }
+        executorService.execute {
+            mdao.update(movie)
+        }
         val intentToHomeActivity = Intent(this@Edit_Movie_Activity, MainActivity3::class.java)
         startActivity(intentToHomeActivity)
     }
 
-    private fun deleteMovie(movie: Movie) {
-        if (movie.id.isEmpty()) {
-            Log.d("Edit_Movie_Activity", "Error deleting: ID film kosong!")
-            return
+    private fun deleteMovie(movie: Movies) {
+        movieCollection.get().addOnSuccessListener { value ->
+            for(i in value) {
+                if(i.id == movie.id) {
+                    movieCollection.document(movie.id).delete()
+                    deleteMovie(movie)
+                }
+            }
         }
-        movieCollection.document(movie.id)
-            .delete()
-            .addOnSuccessListener {
-                Log.d("Edit_Movie_Activity", "Film berhasil dihapus!")
-                val intentToMainActivity = Intent(this@Edit_Movie_Activity, MainActivity3::class.java)
-                startActivity(intentToMainActivity)
-            }
-            .addOnFailureListener {
-                Log.d("Edit_Movie_Activity", "Error menghapus film: ", it)
-            }
+        executorService.execute {
+            mdao.delete(movie)
+        }
+        val intentToMainActivity = Intent(this@Edit_Movie_Activity, MainActivity3::class.java)
+        startActivity(intentToMainActivity)
     }
 
     private fun setEmptyField() {

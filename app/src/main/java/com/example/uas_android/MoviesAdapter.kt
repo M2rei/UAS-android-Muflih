@@ -15,10 +15,6 @@ import com.example.uas_android.database.Movies
 class MoviesAdapter(val listmovie: List<Movies>) :
     RecyclerView.Adapter<MoviesAdapter.ViewHolder>() {
 
-    fun submitList(newList: List<Movies>) {
-        notifyDataSetChanged()
-    }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item, parent, false)
